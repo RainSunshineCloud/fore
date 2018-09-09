@@ -1,17 +1,18 @@
 //调用require.config 写入
-
+var basePath = "/git/fore/";
 require.config({
     context:'_',
     baseUrl: '/',
     paths: {
-        'ko': "./core/lib/knockout-3.4.2",
-        'jquery' : './core/lib/jquery',
-        'text' : './core/lib/text',
-        'domReady' : './core/lib/domReady',
-        'director' : './core/lib/director',
-        'router' : './project/router',
-        'layout' : './core/layout',
-        'conf'   : './conf/pub'
+        'ko': basePath + "core/lib/knockout-3.4.2",
+        'jquery' : basePath + 'core/lib/jquery',
+        'text' : basePath + 'core/lib/text',
+        'css'  : basePath + 'core/lib/css',
+        'domReady' : basePath + 'core/lib/domReady',
+        'director' : basePath + 'core/lib/director',
+        'router' : basePath + 'project/router',
+        'conf'   : basePath + './conf/pub',
+        'commonFile': basePath + 'project/common'
     },
     shim: {
         jquery: {
@@ -26,16 +27,22 @@ require.config({
     }
 });
 
-require(['jquery','ko','domReady','director','router','conf'],function($,ko,domReady,director,router,conf){
+require(['jquery','ko','domReady','director','router','conf','css','commonFile'],function($,ko,domReady,director,router,conf,css,commonFile){
     window.ko = ko;
     window.route =  Router();
+    window.conf = conf;
     route.rs = router;
-    domReady(function () {
+    $.loadCss = css;
 
-
-        if (router.common) {
-            bindVM = function (ps) {
+     bindVM = function (ps) {
+                
+                
                 res = function () {
+                    
+                    if (conf.needLogIn && !commonFile.Login()) {
+                        ps = route.rs.login;
+                    } 
+                   
                     path = ps.split('/');
                     if (path[0] == '') {
                         path.shift();
@@ -47,7 +54,7 @@ require(['jquery','ko','domReady','director','router','conf'],function($,ko,domR
                         action = path.pop();
                     }
 
-
+                   
                     require([conf.vmPath + path],function(controller) {
 
                         if (!controller.depts.common) {
@@ -62,35 +69,36 @@ require(['jquery','ko','domReady','director','router','conf'],function($,ko,domR
                             controller.viewPath = conf.viewPath;
                         }
 
-                        if (!controller.jsPath) {
-                            controller.jsPath = conf.jsPath;
-                        }
-
                         res[action] = [];
                         res.common = [];
                         $.each(controller.depts[action],function(k,v) {
-
+                            v = v.replace('~/',basePath).replace('VIEW/',controller.viewPath);
                             tmp = v.split('!');
                             if (tmp.length == 2) {
-                                v = tmp[0] + '!' + controller.viewPath + tmp[1] + '.html';
+                                v = tmp[0] + '!' + tmp[1] + '.html';
                             } else {
-                                v = controller.jsPath + tmp[0];
+                                v = tmp[0];
                             }
 
                             res[action].push(v);
                         });
 
                         $.each(controller.depts.common,function(k,v) {
+                            v = v.replace('~/',basePath).replace('VIEW/',controller.viewPath);
+
                             tmp = v.split('!');
+
                             if (tmp.length == 2) {
                                 if (tmp[0] == 'css') {
-                                    v = 'text!' + controller.viewPath + tmp[1] + '.css';
-                                } else {
-                                    v = 'text!' + controller.viewPath + tmp[1] + '.html';
+                                    v = tmp[1] + '.css';
+                                    $.loadCss(v);
+                                    return;
+                                } else  {
+                                    v = 'text!'  + tmp[1] + '.html';
                                 }
 
                             } else {
-                                v = controller.jsPath + tmp[0];
+                                v = tmp[0];
                             }
 
                             res.common[k] = v;
@@ -107,16 +115,15 @@ require(['jquery','ko','domReady','director','router','conf'],function($,ko,domR
                 };
 
                 return res;
-
             };
-
+    domReady(function () {
+        if (router.common) {
             require ([router.common],function() {
-
-
-
                 $.each (router ,function (path,module) {
+
                     if (typeof module == "object") {
                         $.each (module,function (_,mo) {
+                             
                             p= path +'/'+ mo;
                             route.on(p,bindVM(mo));
                         });
@@ -130,17 +137,9 @@ require(['jquery','ko','domReady','director','router','conf'],function($,ko,domR
 
 
             $.each (router ,function (path,module) {
-
                 route.on(path,bindVM(module));
             });
         }
-
-
-
-
-
-
-
 
     });
 

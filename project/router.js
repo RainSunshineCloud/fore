@@ -1,6 +1,5 @@
-//路由绑定模型
-//路由 : 模型
 define({
-    menu : ['author/me','author/me'],
-    common: './project/layout'
+    menu : ['author/me','author/add'],
+    common: basePath + 'project/layout.js',
+    login: 'author/me',
 });
